@@ -1,0 +1,58 @@
+[
+    {
+      "item_id": "i002",
+      "owner_id": "u002",
+      "name": "4-Person Tent",
+      "category": "Camping",
+      "location": "Leeds",
+      "daily_rate": 8.0,
+      "available": true,
+      "condition": "Excellent",
+      "description": "Spacious and waterproof tent, perfect for family camping trips."
+    },
+    {
+      "item_id": "i003",
+      "owner_id": "u003",
+      "name": "Electric Scooter",
+      "category": "Transport",
+      "location": "Nottingham",
+      "daily_rate": 10.0,
+      "available": false,
+      "condition": "Fair",
+      "description": "Foldable electric scooter with a 25km range. Great for city commuting."
+    },
+    {
+      "item_id": "i004",
+      "owner_id": "u004",
+      "name": "DSLR Camera",
+      "category": "Photography",
+      "location": "Birmingham",
+      "daily_rate": 15.0,
+      "available": true,
+      "condition": "Like New",
+      "description": "Canon EOS 80D with 18-135mm lens. Ideal for events and travel."
+    },
+    {
+      "item_id": "i005",
+      "owner_id": "u005",
+      "name": "Electric Drill",
+      "category": "Tools",
+      "location": "Sheffield",
+      "daily_rate": 5.0,
+      "available": true,
+      "condition": "Good",
+      "description": "Cordless drill with multiple bits. Suitable for home DIY projects."
+    },
+    {
+      "item_id": "i006",
+      "owner_id": "u006",
+      "name": "Inflatable Kayak",
+      "category": "Water Sports",
+      "location": "Liverpool",
+      "daily_rate": 20.0,
+      "available": true,
+      "condition": "Very Good",
+      "description": "Two-person inflatable kayak with paddles and pump included."
+    }
+]
+

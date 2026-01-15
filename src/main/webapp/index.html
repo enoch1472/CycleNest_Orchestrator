@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- I include the viewport meta tag so my layout scales correctly on phones and smaller screens. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- I keep the title short and descriptive so it reads well in the browser tab and bookmarks. -->
+    <title>CycleNest - Rent & Share Sustainably</title>
+
+    <style>
+        /* I set a clean base style for the whole page so everything feels consistent by default. */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #eef4fb;
+            margin: 0;
+            /* I use padding to stop the container from touching the browser edges on small screens. */
+            padding: 20px;
+        }
+
+        /* I use a centered container to prevent the content from stretching too wide on large displays. */
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: #ffffff;
+            /* I add internal spacing so the UI does not feel cramped. */
+            padding: 25px;
+            border: 1px solid #cfddee;
+        }
+
+        /* I use the same blue throughout headings to keep a consistent “CycleNest” theme. */
+        h1 {
+            text-align: center;
+            color: #0b5ed7;
+        }
+
+        /* I keep this copy light and centered so the page purpose is obvious at first glance. */
+        .description {
+            text-align: center;
+            color: #444;
+            margin-bottom: 30px;
+        }
+
+        /* I treat each feature area as a section and give it a clear visual break. */
+        h2 {
+            margin-top: 40px;
+            color: #0b5ed7;
+            border-bottom: 1px solid #cfddee;
+            padding-bottom: 8px;
+        }
+
+        /* I make labels bold so it is obvious what each input represents. */
+        label {
+            font-weight: bold;
+            margin-top: 10px;
+            display: block;
+        }
+
+        /* I give all inputs a uniform look so the form feels consistent. */
+        input[type="number"],
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #bcd0ea;
+            /* I use border-box so padding doesn’t push fields wider than the container. */
+            box-sizing: border-box;
+        }
+
+        /* I keep all buttons as a single “primary” style so actions are easy to spot. */
+        button {
+            padding: 10px 16px;
+            background-color: #0b5ed7;
+            color: #ffffff;
+            border: 1px solid #0b5ed7;
+            font-size: 14px;
+            cursor: pointer;
+            /* I use margin to avoid buttons visually merging when I place them next to each other. */
+            margin-top: 10px;
+            margin-right: 5px;
+        }
+
+        /* I slightly darken the button on hover to provide interaction feedback. */
+        button:hover {
+            background-color: #094db1;
+        }
+
+        /* I hide result boxes by default so the page is not cluttered until the user runs an action. */
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f4f8fe;
+            border: 1px solid #cfddee;
+            display: none;
+        }
+
+        /* I make result titles stand out so users can quickly scan what they are looking at. */
+        .result-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #0b5ed7;
+        }
+
+        /* I use a table for search results so it is easy to compare items side-by-side. */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        /* I apply borders and padding to keep the table readable and structured. */
+        th, td {
+            border: 1px solid #cfddee;
+            padding: 8px;
+            text-align: left;
+        }
+
+        /* I style the header row differently so users can distinguish columns immediately. */
+        th {
+            background-color: #e7f0fd;
+            color: #0b5ed7;
+        }
+
+        /* I center pagination controls so navigation is obvious under the table. */
+        .pagination {
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        /* I keep pagination buttons compact because there may be many pages. */
+        .pagination button {
+            padding: 5px 10px;
+            margin: 2px;
+        }
+
+        /* I display JSON responses in a preformatted block so indentation and formatting are preserved. */
+        pre {
+            background: #ffffff;
+            padding: 10px;
+            border: 1px solid #cfddee;
+            /* I allow wrapping so long JSON lines still fit on small screens. */
+            white-space: pre-wrap;
+            font-size: 13px;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <!-- I show the brand title clearly at the top of the page. -->
+    <h1>CycleNest</h1>
+
+    <!-- I include a short tagline so the purpose of the application is clear immediately. -->
+    <div class="description">
+        Rent what you need from neighbors. Share what you don’t. Live sustainably.
+    </div>
+
+    <!-- Proximity Checker -->
+    <!-- I use this section to compare the user’s coordinates with an item’s coordinates via my backend routing logic. -->
+    <h2>Check Proximity to Items</h2>
+
+    <!-- I prefill my own coordinates here so I can test quickly without typing every time. -->
+    <label>Your Latitude:</label>
+    <input type="number" step="any" id="userLat" value="52.9548">
+
+    <label>Your Longitude:</label>
+    <input type="number" step="any" id="userLng" value="-1.1576">
+
+    <!-- I leave item coordinates blank because I normally fill them automatically from the search results. -->
+    <label>Item Latitude:</label>
+    <input type="number" step="any" id="itemLat">
+
+    <label>Item Longitude:</label>
+    <input type="number" step="any" id="itemLng">
+
+    <!-- I keep this as a single action button so the user flow is obvious: set coords, then check distance. -->
+    <button onclick="checkProximity()">Check Distance to Item</button>
+
+    <!-- I show the proximity response here (either OSRM-backed distance data or an error message). -->
+    <div class="result-box" id="osrmResultBox">
+        <div class="result-title">Proximity Result</div>
+        <pre id="osrmResultText"></pre>
+    </div>
+
+    <!-- Search Items -->
+    <!-- I use this section to query my Orchestrator for items and then render them in a paginated table. -->
+    <h2>Search for Items</h2>
+
+    <!-- I keep filters optional so the user can search broadly or narrow down as needed. -->
+    <label>Location:</label>
+    <input type="text" id="searchLocation">
+
+    <label>Max Daily Rate (£):</label>
+    <input type="number" step="any" id="searchMaxPrice">
+
+    <label>Availability:</label>
+    <select id="searchAvailable">
+        <option value="">All items</option>
+        <option value="true" selected>Available only</option>
+        <option value="false">Unavailable only</option>
+    </select>
+
+    <!-- I start searches on page 1 to avoid landing on an empty page after applying new filters. -->
+    <button onclick="searchItems(1)">Search Items</button>
+
+    <div class="result-box" id="searchResultBox">
+        <div class="result-title">Search Results</div>
+
+        <!-- I separate the header and body so I can rebuild only the body rows during pagination. -->
+        <table id="searchTable">
+            <thead>
+                <tr>
+                    <th>Item ID</th>
+                    <th>Name</th>
+                    <th>Location</th>
+                    <th>Daily Rate (£)</th>
+                    <th>Available</th>
+                    <th>Condition</th>
+                    <th>Latitude</th>
+                    <th>Longitude</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <!-- I render page buttons here so users can quickly jump between result pages. -->
+        <div class="pagination" id="pagination"></div>
+
+        <!-- I show API errors here (for example, validation issues or backend failures). -->
+        <pre id="searchErrorText" style="color:red; display:none;"></pre>
+    </div>
+
+    <!-- Request Item -->
+    <!-- I use this form to submit a rental request, which my backend stores in Azure Cosmos DB. -->
+    <h2>Request an Item</h2>
+
+    <!-- I prefill sample IDs for quick testing during development. -->
+    <label>Item ID:</label>
+    <input type="text" id="requestItemId" value="i00002">
+
+    <label>Requester ID:</label>
+    <input type="text" id="requestRequesterId" value="u001">
+
+    <button onclick="requestItem()">Submit Rental Request</button>
+
+    <div class="result-box" id="requestResultBox">
+        <div class="result-title">Request Response</div>
+        <pre id="requestResultText"></pre>
+    </div>
+
+    <!-- Cancel Request -->
+    <!-- I use this section to cancel an existing request by ID, which updates the stored record in Azure Cosmos DB. -->
+    <h2>Cancel a Request</h2>
+
+    <label>Request ID:</label>
+    <input type="text" id="cancelRequestId">
+
+    <button onclick="cancelRequest()">Cancel Request</button>
+
+    <div class="result-box" id="cancelResultBox">
+        <div class="result-title">Cancel Response</div>
+        <pre id="cancelResultText"></pre>
+    </div>
+
+</div>
+
+<script>
+    // I keep the current search results in memory so I can paginate locally without re-calling the API.
+    // This reduces backend load and makes page switching feel instant.
+    let searchResults = [];
+    const itemsPerPage = 20;
+
+    // I use one helper function for all API calls so my fetch logic and error handling are consistent.
+    // That way, I don’t repeat the same response checking code in every feature function.
+    async function apiCall(path, method = 'GET', body = null) {
+        // I prefix with "api/" because my backend routes everything under that base path.
+        const response = await fetch("api/" + path, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            // I only attach a body when I’m sending data (POST/PUT). For GET requests I keep it null.
+            body: body ? JSON.stringify(body) : null
+        });
+
+        // I throw the response text so I see the exact backend message (useful during debugging).
+        if (!response.ok) {
+            throw new Error(await response.text());
+        }
+
+        // I assume successful responses are JSON so I can display and use them immediately.
+        return response.json();
+    }
+
+    // I call the Orchestrator proximity endpoint, and the Orchestrator is responsible for consuming OSRM externally.
+    async function checkProximity() {
+        // I build the query string using the current values in the proximity form inputs.
+        const path =
+            `orchestrator/proximity?originLat=${userLat.value}&originLng=${userLng.value}` +
+            `&destLat=${itemLat.value}&destLng=${itemLng.value}`;
+
+        // I reveal the result area immediately and show a loading state so the UI feels responsive.
+        osrmResultBox.style.display = "block";
+        osrmResultText.textContent = "Loading...";
+
+        try {
+            // I pretty-print JSON with indentation so the result is readable when debugging.
+            osrmResultText.textContent =
+                JSON.stringify(await apiCall(path), null, 4);
+        } catch (e) {
+            // I show the raw error message so I can quickly see what failed (network, validation, server error, etc.).
+            osrmResultText.textContent = e.message;
+        }
+    }
+
+    // I search items through my Orchestrator, and then I display the results in a table with pagination.
+    async function searchItems(page = 1) {
+        // I build the path dynamically so only provided filters are included in the query string.
+        let path = "orchestrator/items?";
+
+        // I append each filter only when the user has entered a value.
+        // (If I send empty values, the backend might treat them as real filters.)
+        if (searchLocation.value) path += "location=" + searchLocation.value + "&";
+        if (searchMaxPrice.value) path += "maxPrice=" + searchMaxPrice.value + "&";
+        if (searchAvailable.value) path += "available=" + searchAvailable.value;
+
+        // I show the results section even before the response returns, so it’s obvious something is happening.
+        searchResultBox.style.display = "block";
+
+        // I write a single “Loading…” row to keep the table layout stable while waiting for the API.
+        searchTable.querySelector("tbody").innerHTML =
+            "<tr><td colspan='9'>Loading...</td></tr>";
+
+        // I hide any previous error message when starting a new search.
+        searchErrorText.style.display = "none";
+        searchErrorText.textContent = "";
+
+        try {
+            // I store the full result list locally and paginate in the UI.
+            searchResults = await apiCall(path);
+
+            // I render the first requested page after I receive results.
+            displaySearchResults(page);
+        } catch (e) {
+            // I show errors under the table so the user sees what went wrong without losing context.
+            searchErrorText.textContent = e.message;
+            searchErrorText.style.display = "block";
+
+            // I also clear the table so I don’t leave stale “Loading…” content on screen.
+            searchTable.querySelector("tbody").innerHTML = "";
+        }
+    }
+
+    // I render a single page of results from the searchResults array and rebuild pagination buttons each time.
+    function displaySearchResults(page) {
+        const tbody = searchTable.querySelector("tbody");
+        tbody.innerHTML = "";
+
+        // I convert the requested page into array slice indices.
+        const start = (page - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+
+        // I slice the results and create one row per item.
+        searchResults.slice(start, end).forEach(item => {
+            // I use a template string so the HTML is easy to read and I can inject item fields directly.
+            tbody.innerHTML += `
+                <tr>
+                    <td>${item.item_id}</td>
+                    <td>${item.name}</td>
+                    <td>${item.location}</td>
+                    <td>${item.daily_rate}</td>
+                    <td>${item.available ? "Yes" : "No"}</td>
+                    <td>${item.condition}</td>
+                    <td>${item.latitude}</td>
+                    <td>${item.longitude}</td>
+                    <td>
+                        <!-- I pass the item’s coordinates so I can populate the proximity checker in one click. -->
+                        <button onclick="fillProximity(${item.latitude}, ${item.longitude})">
+                            Check Distance
+                        </button>
+                    </td>
+                </tr>`;
+        });
+
+        // I rebuild pagination every time so it stays accurate for the current result set size.
+        pagination.innerHTML = "";
+
+        // I calculate total pages based on the total number of results.
+        const totalPages = Math.ceil(searchResults.length / itemsPerPage);
+
+        // I create one button per page; clicking it just re-renders using the already-fetched results.
+        for (let i = 1; i <= totalPages; i++) {
+            const btn = document.createElement("button");
+            btn.textContent = i;
+
+            // I wire the click to render that page immediately.
+            btn.onclick = () => displaySearchResults(i);
+
+            // I optionally emphasize the active page (simple UX improvement without extra CSS).
+            if (i === page) {
+                btn.style.fontWeight = "bold";
+            }
+
+            pagination.appendChild(btn);
+        }
+
+        // If there are no results, I show a friendly row so the table doesn’t look broken.
+        if (searchResults.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='9'>No items found for the selected filters.</td></tr>";
+            pagination.innerHTML = "";
+        }
+    }
+
+    // I copy the selected item's coordinates into the proximity form to reduce manual typing and mistakes.
+    function fillProximity(lat, lng) {
+        itemLat.value = lat;
+        itemLng.value = lng;
+
+        // I use a simple alert so the user gets immediate confirmation the fields were filled.
+        alert("Item coordinates filled.");
+       }
+
+    // I submit a rental request through my Orchestrator; my backend persists the request in Azure Cosmos DB.
+    async function requestItem() {
+        requestResultBox.style.display = "block";
+        requestResultText.textContent = "Submitting...";
+
+        try {
+            // I send the minimum request payload: which item is requested and which user is requesting it.
+            requestResultText.textContent = JSON.stringify(
+                await apiCall("orchestrator/requests", "POST", {
+                    item_id: requestItemId.value,
+                    requester_id: requestRequesterId.value
+                }),
+                null,
+                4
+            );
+        } catch (e) {
+            // I surface the backend response message so I can quickly diagnose invalid IDs or business rule failures.
+            requestResultText.textContent = e.message;
+        }
+    }
+
+    // I cancel a request through my Orchestrator; my backend updates the request state in Azure Cosmos DB.
+    async function cancelRequest() {
+        cancelResultBox.style.display = "block";
+        cancelResultText.textContent = "Cancelling...";
+
+        try {
+            // I encode the request ID into the URL path so the backend can target the exact request record.
+            cancelResultText.textContent = JSON.stringify(
+                await apiCall(`orchestrator/requests/${cancelRequestId.value}/cancel`, "PUT"),
+                null,
+                4
+            );
+        } catch (e) {
+            // I print the error message directly so I can see when a request ID doesn’t exist or is not cancellable.
+            cancelResultText.textContent = e.message;
+        }
+    }
+</script>
+
+</body>
+</html>
