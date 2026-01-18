@@ -1,37 +1,49 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  I use this pom.xml to build my CycleNest Orchestrator as a WAR (Java 11) so it can be deployed on Tomcat 9.
+  I removed the tomcat9-maven-plugin because it is not available from Maven Central and it breaks Docker builds
+  that run mvn dependency:go-offline / mvn package in a clean environment.
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <!-- I keep my group/artifact simple for coursework submission and versioning -->
     <groupId>uk.ac.ntu</groupId>
     <artifactId>part_b</artifactId>
     <version>1.0-SNAPSHOT</version>
+
+    <!-- I package as WAR because my service is deployed on Tomcat -->
     <packaging>war</packaging>
 
     <name>CycleNest - OSRM and Orchestrator with Azure Cosmos DB</name>
 
     <properties>
+        <!-- I compile against Java 11 to match the runtime (Tomcat 9 + JDK 11 image) -->
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
+
+        <!-- I keep encodings explicit for consistent builds across machines/containers -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <!-- Jersey 2 (compatible with Tomcat 9 and javax namespace) -->
+        <!-- I use Jersey 2 (javax.* namespace) which is compatible with Tomcat 9 -->
         <jersey.version>2.39</jersey.version>
 
-        <!-- Stable and fully published Jackson version -->
+        <!-- I pin a stable Jackson version for JSON serialisation/deserialisation -->
         <jackson.version>2.17.2</jackson.version>
 
-        <!-- Latest stable Azure Cosmos DB NoSQL SDK -->
+        <!-- I use the Azure Cosmos DB NoSQL SDK for persistence -->
         <azure.cosmos.version>4.64.0</azure.cosmos.version>
 
+        <!-- I set this to avoid WAR plugin failures when web.xml is not present -->
         <failOnMissingWebXml>false</failOnMissingWebXml>
     </properties>
 
     <dependencies>
-        <!-- Java EE 8 API (provided by Tomcat) -->
+        <!-- I depend on Java EE APIs, but Tomcat provides them at runtime -->
         <dependency>
             <groupId>javax</groupId>
             <artifactId>javaee-api</artifactId>
@@ -39,7 +51,7 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Jersey 2 Core -->
+        <!-- I use Jersey as my REST framework (Servlet container integration + HK2 injection) -->
         <dependency>
             <groupId>org.glassfish.jersey.containers</groupId>
             <artifactId>jersey-container-servlet</artifactId>
@@ -51,7 +63,7 @@
             <version>${jersey.version}</version>
         </dependency>
 
-        <!-- Jackson (JSON processing) -->
+        <!-- I use Jackson for JSON processing -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
@@ -68,21 +80,21 @@
             <version>${jackson.version}</version>
         </dependency>
 
-        <!-- Jersey + Jackson integration -->
+        <!-- I integrate Jersey with Jackson so my REST endpoints can automatically marshal JSON -->
         <dependency>
             <groupId>org.glassfish.jersey.media</groupId>
             <artifactId>jersey-media-json-jackson</artifactId>
             <version>${jersey.version}</version>
         </dependency>
 
-        <!-- Azure Cosmos DB NoSQL SDK (pure NoSQL API) -->
+        <!-- I use the Cosmos DB SDK (NoSQL API) for CRUD operations on my database -->
         <dependency>
             <groupId>com.azure</groupId>
             <artifactId>azure-cosmos</artifactId>
             <version>${azure.cosmos.version}</version>
         </dependency>
 
-        <!-- Servlet API (provided by Tomcat) -->
+        <!-- I mark the Servlet API as provided because Tomcat supplies it -->
         <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
@@ -90,7 +102,7 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Optional: JUnit for unit testing -->
+        <!-- I use JUnit 4 for any optional unit tests -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -100,21 +112,22 @@
     </dependencies>
 
     <build>
+        <!-- I set a consistent final WAR name for Docker/Tomcat deployment -->
         <finalName>cycle-nest-orchestrator</finalName>
 
         <plugins>
-            <!-- Compiler Plugin -->
+            <!-- I compile with Java 11 explicitly for predictable builds -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
-                    <source>11</source>
-                    <target>11</target>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
                 </configuration>
             </plugin>
 
-            <!-- WAR Plugin -->
+            <!-- I configure WAR packaging and allow builds without a web.xml -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
@@ -124,17 +137,11 @@
                 </configuration>
             </plugin>
 
-            <!-- Optional: Tomcat 9 Maven Plugin for local deployment -->
-            <plugin>
-                <groupId>org.apache.tomcat.maven</groupId>
-                <artifactId>tomcat9-maven-plugin</artifactId>
-                <version>2.2</version>
-                <configuration>
-                    <url>http://localhost:8080/manager/text</url>
-                    <server>TomcatServer</server>
-                    <path>/cycle-nest-orchestrator</path>
-                </configuration>
-            </plugin>
+            <!--
+              I intentionally do NOT include tomcat9-maven-plugin here.
+              My Docker build only needs "mvn package" to produce the WAR, and Tomcat runs it in the container.
+              Keeping the build portable avoids dependency/plugin resolution failures in clean CI/Docker environments.
+            -->
         </plugins>
     </build>
 </project>
