@@ -1,5 +1,6 @@
 package uk.ac.ntu.part_b;
 
+import javax.inject.Singleton;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -26,9 +27,10 @@ import java.util.stream.Collectors;
  */
 @Path("orchestrator")
 @Produces(MediaType.APPLICATION_JSON)
+@Singleton
 public class OrchestratorResource {
 
-    private ItemRepository repository;
+    private Item__Rep repository;
     private static final ObjectMapper mapper = new ObjectMapper();
 
     // I keep OSRM config here because my orchestrator is the component responsible for consuming the external service.
@@ -39,7 +41,7 @@ public class OrchestratorResource {
     public OrchestratorResource() {
         System.out.println("★★★ OrchestratorResource instantiated! ★★★");
         try {
-            this.repository = new ItemRepository();
+            this.repository = new Item__Rep();
 
             List<Item> testItems = repository.searchItems(null, null, null, true);
             System.out.println("★★★ Connected to Azure Cosmos DB – "
@@ -248,7 +250,7 @@ public class OrchestratorResource {
                         .build();
             }
 
-            RentalRequest request = repository.createRequest(requestBody.getItemId(), requestBody.getRequesterId());
+            Rental__Request request = repository.createRequest(requestBody.getItemId(), requestBody.getRequesterId());
             return Response.status(Response.Status.CREATED).entity(mapper.writeValueAsString(request)).build();
 
         } catch (JsonProcessingException e) {
@@ -273,7 +275,7 @@ public class OrchestratorResource {
         }
 
         try {
-            RentalRequest request = repository.cancelRequest(requestId);
+            Rental__Request request = repository.cancelRequest(requestId);
             if (request == null) {
                 return Response.status(Response.Status.NOT_FOUND)
                         .entity(new ErrorResponse("not_found", "Request not found"))

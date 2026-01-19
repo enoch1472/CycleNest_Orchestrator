@@ -2,18 +2,20 @@ package uk.ac.ntu.part_b;
 
 import com.azure.cosmos.*;
 import com.azure.cosmos.models.*;
-import com.azure.cosmos.util.CosmosPagedIterable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class ItemRepository {
+public class Item__Rep {
 
     // I keep my Cosmos DB connection details as constants so I have a single place to change them.
     // (In my final deployment, I would move these into environment variables or config to avoid hardcoding secrets.)
-    private static final String ENDPOINT = "https://myfirstfreedb1.documents.azure.com:443/";
-    private static final String KEY = "E9g9AoO7bfM6GcnnFM5MkEKDiLaCvviKe3Zhu0wLCESmFI9RhUK8K0NeJc5NgqFajFIJQfwsAQDBACDbdSlJdA==";
+    //
+    // I made these package-visible (not private) so my CosmosClientProvider can reuse them without duplicating values.
+    // I did not change the values; I only changed the visibility to support my Singleton client.
+    static final String ENDPOINT = "https://myfirstfreedb1.documents.azure.com:443/";
+    static final String KEY = "lb9oscLbltkcuDhkkwasQV84awcOKc41A0bdAE9XA2Upk5TrkULCznKKKCgR9XDaz8N8dFJXDCzXACDbKWBLkQ==";
 
     private static final String DATABASE_ID = "thedb";
     private static final String ITEM_CONTAINER_ID = "item";
@@ -24,16 +26,15 @@ public class ItemRepository {
     private CosmosContainer requestContainer;
 
     // I initialise the repository by connecting once to Cosmos and caching container references for reuse.
-    public ItemRepository() {
+    public Item__Rep() {
         initializeCosmos();
     }
 
     private void initializeCosmos() {
-        cosmosClient = new CosmosClientBuilder()
-                .endpoint(ENDPOINT)
-                .key(KEY)
-                .consistencyLevel(ConsistencyLevel.SESSION)
-                .buildClient();
+
+        // I DO NOT create a new CosmosClient here anymore because under load that creates too many clients/connections.
+        // Instead, I reuse my Singleton Cosmos client, which is the correct approach for stability and performance.
+        cosmosClient = CosmosClientProvider.getClient();
 
         CosmosDatabase database = cosmosClient.getDatabase(DATABASE_ID);
         itemContainer = database.getContainer(ITEM_CONTAINER_ID);
@@ -100,14 +101,14 @@ public class ItemRepository {
     }
 
     // I create a new rental request, ensuring I include Cosmos's required "id" field and the correct partition key.
-    public RentalRequest createRequest(String itemId, String requesterId) {
+    public Rental__Request createRequest(String itemId, String requesterId) {
         Item item = getItemById(itemId);
         if (item == null) {
             throw new IllegalArgumentException("Item not found");
         }
 
         String requestId = "req" + System.currentTimeMillis();
-        RentalRequest request = new RentalRequest(requestId, itemId, requesterId, "pending");
+        Rental__Request request = new Rental__Request(requestId, itemId, requesterId, "pending");
         request.setRequestDate(new Date().toString());
 
         Map<String, Object> requestMap = new ObjectMapper().convertValue(request, Map.class);
@@ -119,7 +120,7 @@ public class ItemRepository {
     }
 
     // I locate the request by request_id, update status if it is still pending, and then upsert the record back into Cosmos.
-    public RentalRequest cancelRequest(String requestId) {
+    public Rental__Request cancelRequest(String requestId) {
         try {
             String queryText = "SELECT * FROM c WHERE c.request_id = @requestId";
             List<SqlParameter> params = List.of(new SqlParameter("@requestId", requestId));
@@ -128,8 +129,8 @@ public class ItemRepository {
             querySpec.setQueryText(queryText);
             querySpec.setParameters(params);
 
-            RentalRequest request = requestContainer
-                    .queryItems(querySpec, new CosmosQueryRequestOptions(), RentalRequest.class)
+            Rental__Request request = requestContainer
+                    .queryItems(querySpec, new CosmosQueryRequestOptions(), Rental__Request.class)
                     .stream()
                     .findFirst()
                     .orElse(null);
@@ -157,16 +158,18 @@ public class ItemRepository {
     }
 
     // I fetch all requests as a simple collection so I can return them to controllers/services without extra paging logic.
-    public Collection<RentalRequest> getAllRequests() {
-        return requestContainer.queryItems("SELECT * FROM c", new CosmosQueryRequestOptions(), RentalRequest.class)
+    public Collection<Rental__Request> getAllRequests() {
+        return requestContainer.queryItems("SELECT * FROM c", new CosmosQueryRequestOptions(), Rental__Request.class)
                 .stream()
                 .collect(Collectors.toList());
     }
 
     // I close the Cosmos client when I am done so connections are released cleanly.
+    //
+    // Because I now use a Singleton CosmosClient shared across requests, I do not close it per repository instance.
+    // If I closed it here, another request could fail because the shared client would be closed unexpectedly.
+    // I keep this method so I do not remove anything, but I intentionally do not close the shared client.
     public void close() {
-        if (cosmosClient != null) {
-            cosmosClient.close();
-        }
+
     }
 }

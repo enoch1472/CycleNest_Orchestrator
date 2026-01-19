@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * I use this model to represent a rental request in my CycleNest system,
  * and I map each field to the JSON keys my API and Cosmos documents use.
  */
-public class RentalRequest {
+public class Rental__Request {
 
     @JsonProperty("request_id")
     private String requestId;
@@ -25,10 +25,10 @@ public class RentalRequest {
     private String requestDate;
 
     // I keep a no-args constructor for Jackson deserialization.
-    public RentalRequest() {}
+    public Rental__Request() {}
 
     // I use this constructor when I create new requests in my repository/service layer.
-    public RentalRequest(String requestId, String itemId, String requesterId, String status) {
+    public Rental__Request(String requestId, String itemId, String requesterId, String status) {
         this.requestId = requestId;
         this.itemId = itemId;
         this.requesterId = requesterId;
